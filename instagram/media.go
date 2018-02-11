@@ -204,7 +204,7 @@ func getFromAccountMediaList(data []byte) ([]Media, error) {
 	}
 
 	num := len(m.Graphql.User.EdgeOwnerToTimelineMedia.Edges)
-	medias := make([]Media, num)
+	var medias []Media
 
 	for i := 0; i < num; i++ {
 		media := Media{}
