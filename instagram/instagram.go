@@ -11,11 +11,13 @@ package instagram
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"errors"
+
+	"github.com/prometheus/common/log"
 )
 
 // GetAccountByUsername try to find account by username.
@@ -59,34 +61,21 @@ func GetMediaByCode(code string) (Media, error) {
 // GetAccountMedia try to get slice of user's media.
 // Limit set how much media you need.
 func GetAccountMedia(username string, limit uint16) ([]Media, error) {
-	var count uint16
 	maxID := ""
-	available := true
 	medias := []Media{}
-	for available && count < limit {
-		url := fmt.Sprintf(accountMediaURL, username, maxID)
-		jsonBody, err := getJSONFromURL(url)
-		if err != nil {
-			return nil, err
-		}
-		available, _ = jsonBody["more_available"].(bool)
-
-		items, _ := jsonBody["items"].([]interface{})
-		for _, item := range items {
-			if count >= limit {
-				return medias, nil
-			}
-			count++
-			itemData, err := json.Marshal(item)
-			if err == nil {
-				media, err := getFromAccountMediaList(itemData)
-				if err == nil {
-					medias = append(medias, media)
-					maxID = media.ID
-				}
-			}
-		}
+	url := fmt.Sprintf(accountMediaURL, username, maxID)
+	jsonBody, err := getJSONFromURL(url)
+	if err != nil {
+		return nil, err
 	}
+
+	itemData, err := json.Marshal(jsonBody)
+
+	medias, err = getFromAccountMediaList(itemData)
+	if err != nil {
+		log.Error(err)
+	}
+
 	return medias, nil
 }
 
@@ -288,7 +277,7 @@ func getDataFromURL(url string) ([]byte, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New( "statusCode != 200")
+		return nil, errors.New("statusCode != 200")
 	}
 	defer resp.Body.Close()
 
