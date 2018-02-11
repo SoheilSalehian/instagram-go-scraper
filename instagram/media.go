@@ -10,7 +10,6 @@ package instagram
 
 import (
 	"encoding/json"
-	"strconv"
 )
 
 // TypeImage is a string that define image type for media.
@@ -196,53 +195,99 @@ func getFromMediaPage(data []byte) (Media, error) {
 
 func getFromAccountMediaList(data []byte) (Media, error) {
 	var mediaJSON struct {
-		ID   string `json:"id"`
-		Code string `json:"code"`
-		User struct {
-			ID             string `json:"id"`
-			FullName       string `json:"full_name"`
-			ProfilePicture string `json:"profile_picture"`
-			Username       string `json:"username"`
-		} `json:"user"`
-		Images struct {
-			StandardResolution struct {
-				Width  int    `json:"width"`
-				Height int    `json:"height"`
-				URL    string `json:"url"`
-			} `json:"standard_resolution"`
-		} `json:"images"`
-		CreatedTime string `json:"created_time"`
-		Caption     struct {
-			Text string `json:"text"`
-		} `json:"caption"`
-		Likes struct {
-			Count float64 `json:"count"`
-		} `json:"likes"`
-		Comments struct {
-			Count float64 `json:"count"`
-		} `json:"comments"`
-		Type   string `json:"type"`
-		Videos struct {
-			StandardResolution struct {
-				Width  int    `json:"width"`
-				Height int    `json:"height"`
-				URL    string `json:"url"`
-			} `json:"standard_resolution"`
-		} `json:"videos"`
-		CarouselMedia []struct {
-			Images struct {
-				StandardResolution struct {
-					URL string `json:"url"`
-				} `json:"standard_resolution"`
-			} `json:"images"`
-			Videos struct {
-				StandardResolution struct {
-					URL string `json:"url"`
-				} `json:"standard_resolution"`
-			} `json:"videos"`
-			UsersInPhoto []interface{} `json:"users_in_photo"`
-			Type         string        `json:"type"`
-		} `json:"carousel_media"`
+		Graphql struct {
+			User struct {
+				Biography       string      `json:"biography"`
+				BlockedByViewer bool        `json:"blocked_by_viewer"`
+				ConnectedFbPage interface{} `json:"connected_fb_page"`
+				CountryBlock    bool        `json:"country_block"`
+				EdgeFollow      struct {
+					Count int `json:"count"`
+				} `json:"edge_follow"`
+				EdgeFollowedBy struct {
+					Count int `json:"count"`
+				} `json:"edge_followed_by"`
+				EdgeMediaCollections struct {
+					Count    int           `json:"count"`
+					Edges    []interface{} `json:"edges"`
+					PageInfo struct {
+						EndCursor   interface{} `json:"end_cursor"`
+						HasNextPage bool        `json:"has_next_page"`
+					} `json:"page_info"`
+				} `json:"edge_media_collections"`
+				EdgeOwnerToTimelineMedia struct {
+					Count int `json:"count"`
+					Edges []struct {
+						Node struct {
+							Typename         string `json:"__typename"`
+							CommentsDisabled bool   `json:"comments_disabled"`
+							Dimensions       struct {
+								Height int `json:"height"`
+								Width  int `json:"width"`
+							} `json:"dimensions"`
+							DisplayURL  string `json:"display_url"`
+							EdgeLikedBy struct {
+								Count int `json:"count"`
+							} `json:"edge_liked_by"`
+							EdgeMediaPreviewLike struct {
+								Count int `json:"count"`
+							} `json:"edge_media_preview_like"`
+							EdgeMediaToCaption struct {
+								Edges []struct {
+									Node struct {
+										Text string `json:"text"`
+									} `json:"node"`
+								} `json:"edges"`
+							} `json:"edge_media_to_caption"`
+							EdgeMediaToComment struct {
+								Count int `json:"count"`
+							} `json:"edge_media_to_comment"`
+							GatingInfo   interface{} `json:"gating_info"`
+							ID           string      `json:"id"`
+							IsVideo      bool        `json:"is_video"`
+							MediaPreview string      `json:"media_preview"`
+							Owner        struct {
+								ID string `json:"id"`
+							} `json:"owner"`
+							Shortcode          string `json:"shortcode"`
+							TakenAtTimestamp   int    `json:"taken_at_timestamp"`
+							ThumbnailResources []struct {
+								ConfigHeight int    `json:"config_height"`
+								ConfigWidth  int    `json:"config_width"`
+								Src          string `json:"src"`
+							} `json:"thumbnail_resources"`
+							ThumbnailSrc string `json:"thumbnail_src"`
+						} `json:"node"`
+					} `json:"edges"`
+					PageInfo struct {
+						EndCursor   string `json:"end_cursor"`
+						HasNextPage bool   `json:"has_next_page"`
+					} `json:"page_info"`
+				} `json:"edge_owner_to_timeline_media"`
+				EdgeSavedMedia struct {
+					Count    int           `json:"count"`
+					Edges    []interface{} `json:"edges"`
+					PageInfo struct {
+						EndCursor   interface{} `json:"end_cursor"`
+						HasNextPage bool        `json:"has_next_page"`
+					} `json:"page_info"`
+				} `json:"edge_saved_media"`
+				ExternalURL            string `json:"external_url"`
+				ExternalURLLinkshimmed string `json:"external_url_linkshimmed"`
+				FollowedByViewer       bool   `json:"followed_by_viewer"`
+				FollowsViewer          bool   `json:"follows_viewer"`
+				FullName               string `json:"full_name"`
+				HasBlockedViewer       bool   `json:"has_blocked_viewer"`
+				HasRequestedViewer     bool   `json:"has_requested_viewer"`
+				ID                     string `json:"id"`
+				IsPrivate              bool   `json:"is_private"`
+				IsVerified             bool   `json:"is_verified"`
+				ProfilePicURL          string `json:"profile_pic_url"`
+				ProfilePicURLHd        string `json:"profile_pic_url_hd"`
+				RequestedByViewer      bool   `json:"requested_by_viewer"`
+				Username               string `json:"username"`
+			} `json:"user"`
+		} `json:"graphql"`
 	}
 
 	err := json.Unmarshal(data, &mediaJSON)
@@ -251,52 +296,35 @@ func getFromAccountMediaList(data []byte) (Media, error) {
 	}
 
 	media := Media{}
-	media.Code = mediaJSON.Code
-	media.ID = mediaJSON.ID
-	media.Caption = mediaJSON.Caption.Text
-	media.LikesCount = uint32(mediaJSON.Likes.Count)
-	media.CommentsCount = uint32(mediaJSON.Comments.Count)
+	media.Code = mediaJSON.Graphql.User.EdgeOwnerToTimelineMedia.Edges[0].Node.Shortcode
+	media.ID = mediaJSON.Graphql.User.ID
+	// media.AD = mediaJSON.Graphql.User.IsAd
+	media.Date = uint64(mediaJSON.Graphql.User.EdgeOwnerToTimelineMedia.Edges[0].Node.TakenAtTimestamp)
+	media.CommentsCount = uint32(mediaJSON.Graphql.User.EdgeOwnerToTimelineMedia.Edges[0].Node.EdgeMediaToComment.Count)
+	media.LikesCount = uint32(mediaJSON.Graphql.User.EdgeOwnerToTimelineMedia.Edges[0].Node.EdgeMediaPreviewLike.Count)
 
-	date, err := strconv.ParseUint(mediaJSON.CreatedTime, 10, 64)
-	if err == nil {
-		media.Date = date
+	if len(mediaJSON.Graphql.User.EdgeOwnerToTimelineMedia.Edges[0].Node.EdgeMediaToCaption.Edges) > 0 {
+		media.Caption = mediaJSON.Graphql.User.EdgeOwnerToTimelineMedia.Edges[0].Node.EdgeMediaToCaption.Edges[0].Node.Text
 	}
 
-	if mediaJSON.Type == carousel {
-		media.Type = TypeCarousel
-		for _, itemJSOM := range mediaJSON.CarouselMedia {
-			var item mediaItem
-			item.Type = itemJSOM.Type
-			if item.Type == video {
-				item.URL = itemJSOM.Videos.StandardResolution.URL
-			} else {
-				item.URL = itemJSOM.Images.StandardResolution.URL
-			}
-			media.MediaList = append(media.MediaList, item)
-		}
-	} else {
-		if mediaJSON.Type == video {
-			media.MediaURL = mediaJSON.Videos.StandardResolution.URL
-			media.Type = TypeVideo
-		} else {
-			media.MediaURL = mediaJSON.Images.StandardResolution.URL
-			media.Type = TypeImage
-		}
-		var item mediaItem
-		item.Type = media.Type
-		item.URL = media.MediaURL
-		item.Code = media.Code
-		media.MediaList = append(media.MediaList, item)
-	}
+	// FIXME: This endpoint doesn't allow for any other media types (videos, etc) other than images
+	// var mediaType = mediaJSON.Graphql.User.EdgeOwnerToTimelineMedia.Edges[0].Node.Typename
+	media.Type = TypeImage
+	media.MediaURL = mediaJSON.Graphql.User.EdgeOwnerToTimelineMedia.Edges[0].Node.DisplayURL
+	var item mediaItem
+	item.Code = media.Code
+	item.Type = media.Type
+	item.URL = media.MediaURL
+	media.MediaList = append(media.MediaList, item)
 
-	media.Owner.Username = mediaJSON.User.Username
-	media.Owner.FullName = mediaJSON.User.FullName
-	media.Owner.ID = mediaJSON.User.ID
-	media.Owner.ProfilePicURL = mediaJSON.User.ProfilePicture
+	media.Owner.ID = mediaJSON.Graphql.User.ID
+	media.Owner.ProfilePicURL = mediaJSON.Graphql.User.ProfilePicURL
+	media.Owner.Username = mediaJSON.Graphql.User.Username
+	media.Owner.FullName = mediaJSON.Graphql.User.FullName
+	media.Owner.Private = mediaJSON.Graphql.User.IsPrivate
 
 	return media, nil
 }
-
 func getFromSearchMediaList(data []byte) (Media, error) {
 	var mediaJSON struct {
 		CommentsDisabled bool   `json:"comments_disabled"`
